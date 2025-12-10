@@ -70,7 +70,7 @@ export function ChatBot({ userName }: ChatBotProps) {
   const getChatSession = async () => {
     if (!chatSessionRef.current) {
       const model = genAI.getGenerativeModel({ 
-        model: "gemma-3-12b",
+        model: "gemini-robotics-er-1.5-preview",
         systemInstruction: SYSTEM_INSTRUCTION 
       });
       
