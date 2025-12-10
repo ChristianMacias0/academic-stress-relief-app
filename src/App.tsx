@@ -12,7 +12,7 @@ type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [coins, setCoins] = useState(150);
-  const [userName, setUserName] = useState('Ana');
+  const [userName, setUserName] = useState('User');
   const [tasks, setTasks] = useState([
     { id: '1', title: 'Estudiar para examen de Cálculo', completed: false, reward: 50, dueDate: '2025-11-18' },
     { id: '2', title: 'Entregar proyecto de Programación', completed: false, reward: 80, dueDate: '2025-11-20' },
