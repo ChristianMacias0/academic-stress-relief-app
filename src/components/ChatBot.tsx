@@ -1,7 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User as UserIcon, Heart, AlertCircle } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Heart, AlertCircle, Lock } from 'lucide-react'; // Agregué Lock
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { toast } from "sonner"; // Asumiendo que usas sonner como en Rewards
+
+// --- CONFIGURACIÓN ---
+const MAX_MESSAGES_PER_SESSION = 10; // Límite de mensajes por sesión
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+// Instrucciones para que la IA no sea condescendiente y se limite al tema
+const SYSTEM_INSTRUCTION = `
+Eres un compañero de bienestar emocional para estudiantes universitarios llamado "Mindzy".
+REGLAS DE PERSONALIDAD:
+1. LENGUAJE NEUTRO POR DEFECTO: Empieza siempre con un español neutro y claro. NO uses jerga, modismos ni coloquialismos (como "chido", "bacán", "guay", "parce") A MENOS QUE el usuario los use primero.
+2. EFECTO ESPEJO: Solo si el usuario usa una palabra coloquial, tienes permiso para usarla sutilmente para conectar. Si el usuario es serio, mantente serio pero cercano.
+3. CERO CONDESCENDENCIA: Habla de igual a igual. Prohibido usar frases de lástima o clichés clínicos como "Es comprensible", "Lamento escuchar eso", "Valido tus sentimientos" o "Pobrecito".
+4. SIN DRAMA: Si el usuario está mal, no lo mires con pena. Normaliza la situación con frases simples como "A veces pasa", "Esos días son pesados" o "Te entiendo, a mí también me pasaría".
+
+REGLAS DE RESTRICCIÓN (MUY IMPORTANTE):
+1. TU ÚNICO PROPÓSITO es conversar, escuchar desahogos y hablar de estrés o emociones.
+2. SI EL USUARIO PIDE: ayuda con tareas, código, matemáticas, busquedas en google, recetas, datos históricos o cualquier tema "académico/técnico", DEBES NEGARTE AMABLEMENTE.
+3. Ejemplo de negativa: "Me encantaría ayudarte, pero mi función es escucharte y apoyarte con tu estrés, no puedo resolver tareas académicas o buscar datos."
+4. Mantén las respuestas breves y conversacionales (máximo 2-3 oraciones).
+`;
 
 interface Message {
   id: string;
@@ -19,7 +41,7 @@ export function ChatBot({ userName }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: `¡Hola ${userName}! 👋 Soy tu asistente personal de bienestar. Estoy aquí para escucharte y apoyarte. ¿Cómo te sientes hoy?`,
+      text: `¡Hola ${userName}! 👋 Soy tu espacio seguro. Estoy aquí para escucharte sin juzgar. ¿Qué tienes en mente hoy?`,
       sender: 'bot',
       timestamp: new Date(),
       supportLevel: 'normal',
@@ -27,7 +49,14 @@ export function ChatBot({ userName }: ChatBotProps) {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [messageCount, setMessageCount] = useState(0); // Contador de mensajes
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Inicializar Gemini
+  const genAI = new GoogleGenerativeAI(API_KEY);
+  
+  // Mantenemos una referencia al chat actual para mantener el contexto
+  const chatSessionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -35,95 +64,94 @@ export function ChatBot({ userName }: ChatBotProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const getBotResponse = (userMessage: string): { text: string; supportLevel: 'normal' | 'concern' } => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Palabras clave que indican estrés o problemas emocionales
-    const stressKeywords = ['estresado', 'ansiedad', 'agobiado', 'deprimido', 'triste', 'llorar', 'preocupado', 'miedo', 'pánico'];
-    const hasStressIndicators = stressKeywords.some(keyword => lowerMessage.includes(keyword));
-
-    if (hasStressIndicators) {
-      const responses = [
-        'Entiendo que estés pasando por un momento difícil. Es completamente válido sentirse así. ¿Quieres hablar más sobre lo que está pasando? Estoy aquí para escucharte.',
-        'Lamento que te sientas así. Recuerda que está bien pedir ayuda. ¿Hay algo específico que te esté generando estos sentimientos?',
-        'Tu bienestar emocional es muy importante. Me alegra que estés compartiendo esto conmigo. ¿Has pensado en hablar con alguien profesional sobre cómo te sientes?',
-      ];
-      return {
-        text: responses[Math.floor(Math.random() * responses.length)],
-        supportLevel: 'concern',
-      };
+  // Función para iniciar/obtener la sesión de chat
+  const getChatSession = async () => {
+    if (!chatSessionRef.current) {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-2.5-flash",
+        systemInstruction: SYSTEM_INSTRUCTION 
+      });
+      
+      chatSessionRef.current = model.startChat({
+        history: [
+          {
+            role: "user",
+            parts: [{ text: `Hola, soy ${userName}.` }],
+          },
+          {
+            role: "model",
+            parts: [{ text: `Hola ${userName}, estoy listo para escucharte.` }],
+          },
+        ],
+      });
     }
-
-    // Palabras clave sobre tareas y estudios
-    if (lowerMessage.includes('tarea') || lowerMessage.includes('estudio') || lowerMessage.includes('examen')) {
-      const responses = [
-        'Entiendo que las tareas pueden ser abrumadoras. ¿Qué tal si las divides en partes más pequeñas? Así será más fácil avanzar paso a paso.',
-        'Los estudios son importantes, pero también lo es tu descanso. Recuerda tomar pausas regulares para mantener tu mente fresca.',
-        '¡Puedes con esto! Organizar tus tareas en nuestra sección de Tareas puede ayudarte a visualizar mejor tu progreso.',
-      ];
-      return {
-        text: responses[Math.floor(Math.random() * responses.length)],
-        supportLevel: 'normal',
-      };
-    }
-
-    // Respuestas positivas
-    if (lowerMessage.includes('bien') || lowerMessage.includes('feliz') || lowerMessage.includes('genial')) {
-      const responses = [
-        '¡Me alegra mucho escuchar eso! 😊 Mantén esa energía positiva. ¿Hay algo en lo que pueda ayudarte hoy?',
-        '¡Qué bueno! Es importante celebrar los momentos buenos. ¿Qué te ha hecho sentir así?',
-        '¡Excelente! Me encanta verte con esa actitud. ¿Tienes algún objetivo que quieras alcanzar hoy?',
-      ];
-      return {
-        text: responses[Math.floor(Math.random() * responses.length)],
-        supportLevel: 'normal',
-      };
-    }
-
-    // Respuesta por defecto
-    const defaultResponses = [
-      'Cuéntame más sobre eso. Estoy aquí para escucharte y ayudarte en lo que necesites.',
-      'Interesante. ¿Cómo te hace sentir esa situación?',
-      'Entiendo. Recuerda que no estás solo/a en esto. ¿Hay algo específico en lo que pueda apoyarte?',
-      'Gracias por compartir eso conmigo. Tu bienestar es importante. ¿Qué más está en tu mente?',
-    ];
-    
-    return {
-      text: defaultResponses[Math.floor(Math.random() * defaultResponses.length)],
-      supportLevel: 'normal',
-    };
+    return chatSessionRef.current;
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
+    // 1. Verificación de límite de sesión
+    if (messageCount >= MAX_MESSAGES_PER_SESSION) {
+        toast.error("Has alcanzado el límite de mensajes por esta sesión de prueba.");
+        return;
+    }
+
+    const newMessageText = inputText;
+    setInputText(''); // Limpiar input inmediatamente
+    setMessageCount(prev => prev + 1); // Aumentar contador
+
+    // Agregar mensaje del usuario
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputText,
+      text: newMessageText,
       sender: 'user',
       timestamp: new Date(),
     };
-
     setMessages(prev => [...prev, userMessage]);
-    setInputText('');
     setIsTyping(true);
 
-    // Simular tiempo de respuesta del bot
-    setTimeout(() => {
-      const { text, supportLevel } = getBotResponse(inputText);
+    try {
+      // 2. Llamada real a Gemini
+      const chat = await getChatSession();
+      const result = await chat.sendMessage(newMessageText);
+      const response = result.response;
+      const text = response.text();
+
+      // Análisis simple para detectar si la IA sugiere ayuda profesional (basado en palabras clave en SU respuesta)
+      const lowerResponse = text.toLowerCase();
+      const isConcerning = lowerResponse.includes("profesional") || lowerResponse.includes("ayuda psicológica") || lowerResponse.includes("terapia");
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text,
+        text: text,
         sender: 'bot',
         timestamp: new Date(),
-        supportLevel,
+        supportLevel: isConcerning ? 'concern' : 'normal',
       };
+
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error conectando con Gemini:", error);
+      toast.error("Hubo un error al conectar con el asistente.");
+      
+      // Mensaje de error en el chat
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: "Lo siento, perdí la conexión momentáneamente. ¿Podemos intentar de nuevo?",
+        sender: 'bot',
+        timestamp: new Date(),
+        supportLevel: 'normal'
+      }]);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    }
   };
+
+
+  const isLimitReached = messageCount >= MAX_MESSAGES_PER_SESSION;
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #D1FAE5 0%, #A7F3D0 50%, #6EE7B7 100%)' }}>
@@ -138,10 +166,15 @@ export function ChatBot({ userName }: ChatBotProps) {
             <Bot className="w-9 h-9" />
           </div>
           <div className="flex-1">
-            <h2 className="text-white text-xl mb-1">Asistente de Bienestar IA</h2>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-              <p className="text-white/90 text-sm">En línea - Siempre aquí para ti</p>
+            <h2 className="text-white text-xl mb-1">Asistente de Bienestar</h2>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                 <p className="text-white/90 text-sm">En línea (Beta)</p>
+              </div>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                {messageCount}/{MAX_MESSAGES_PER_SESSION} msgs
+              </span>
             </div>
           </div>
         </div>
@@ -179,17 +212,16 @@ export function ChatBot({ userName }: ChatBotProps) {
                   color: message.sender === 'bot' ? '#0B006E' : '#ffffff'
                 }}
               >
-                <p className="text-sm leading-relaxed">{message.text}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
               </div>
               
-              {/* Mostrar aviso si el bot detecta preocupación */}
+              {/* Mostrar aviso si el bot detecta preocupación grave */}
               {message.sender === 'bot' && message.supportLevel === 'concern' && (
                 <Card className="mt-3 p-4 border-0 shadow-md" style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)' }}>
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#D97706' }} />
                     <p className="text-xs leading-relaxed" style={{ color: '#78350F', fontWeight: 500 }}>
-                      Si sientes que necesitas apoyo profesional, recuerda que hay recursos disponibles. 
-                      Tu salud mental es prioritaria. 💙
+                      Recuerda que soy una IA de prueba. Si necesitas ayuda real, por favor contacta a un profesional en la sección de Psicólogos.
                     </p>
                   </div>
                 </Card>
@@ -213,6 +245,16 @@ export function ChatBot({ userName }: ChatBotProps) {
             </div>
           </div>
         )}
+        
+        {/* Aviso de límite alcanzado */}
+        {isLimitReached && (
+             <div className="flex justify-center my-4">
+                 <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full text-xs font-semibold text-gray-500 shadow-sm flex items-center gap-2">
+                     <Lock className="w-3 h-3" />
+                     Sesión de prueba finalizada
+                 </div>
+             </div>
+        )}
 
         <div ref={messagesEndRef} />
       </div>
@@ -222,7 +264,7 @@ export function ChatBot({ userName }: ChatBotProps) {
         <div className="border-0 rounded-2xl p-4 flex items-start gap-3 shadow-md" style={{ background: 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)' }}>
           <Heart className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#6366F1' }} />
           <p className="text-xs leading-relaxed" style={{ color: '#4C1D95', fontWeight: 500 }}>
-            Este es un espacio seguro y confidencial. Comparte lo que necesites sin preocupaciones.
+            Este es un espacio seguro. Tus conversaciones son privadas durante esta sesión.
           </p>
         </div>
       </div>
@@ -234,14 +276,15 @@ export function ChatBot({ userName }: ChatBotProps) {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Escribe tu mensaje..."
-            className="flex-1 px-5 py-4 border-2 rounded-3xl focus:outline-none focus:ring-0 shadow-sm"
+            onKeyPress={(e) => e.key === 'Enter' && !isLimitReached && handleSendMessage()}
+            placeholder={isLimitReached ? "Límite de mensajes alcanzado" : "Escribe tu mensaje..."}
+            disabled={isLimitReached || isTyping}
+            className="flex-1 px-5 py-4 border-2 rounded-3xl focus:outline-none focus:ring-0 shadow-sm disabled:opacity-50 disabled:bg-gray-100"
             style={{ borderColor: '#10b981', color: '#0B006E' }}
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || isLimitReached || isTyping}
             className="w-14 h-14 rounded-full hover:opacity-90 disabled:opacity-50 shadow-lg"
             style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
           >
