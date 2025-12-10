@@ -1,7 +1,6 @@
 import { Calendar, TrendingUp, MessageCircle, CheckSquare, Gift, Sparkles, Zap } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { useState } from 'react';
 
 interface Task {
   id: string;
@@ -18,22 +17,8 @@ interface HomeProps {
 }
 
 export function Home({ userName, tasks, onNavigate }: HomeProps) {
-  const [chatInput, setChatInput] = useState('');
   const pendingTasks = tasks.filter(t => !t.completed);
   const completedToday = tasks.filter(t => t.completed).length;
-
-  const handleChatSubmit = () => {
-    if (chatInput.trim()) {
-      // Si el usuario escribe algo, navegar al chat
-      onNavigate('chat');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleChatSubmit();
-    }
-  };
 
   return (
     <div className="min-h-full relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #E0E7FF 0%, #F5F3FF 50%, #FEF3C7 100%)' }}>
@@ -55,9 +40,13 @@ export function Home({ userName, tasks, onNavigate }: HomeProps) {
           </p>
         </div>
 
-        {/* Resumen rápido mejorado */}
+        {/* Resumen rápido */}
         <div className="grid grid-cols-2 gap-4">
-          <Card className="p-5 border-0 shadow-lg transform transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #DBEAFE 0%, #93C5FD 100%)' }}>
+          <Card 
+            onClick={() => onNavigate('tasks')}
+            className="p-5 border-0 shadow-lg transform transition-all hover:scale-105 cursor-pointer active:scale-95" 
+            style={{ background: 'linear-gradient(135deg, #DBEAFE 0%, #93C5FD 100%)' }}
+          >
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md" style={{ backgroundColor: '#007BFF' }}>
                 <Calendar className="w-7 h-7 text-white" />
@@ -78,11 +67,11 @@ export function Home({ userName, tasks, onNavigate }: HomeProps) {
           </Card>
         </div>
 
-        {/* Botones de acción principales con diseño mejorado */}
+        {/* Botones de acción principales */}
         <div className="space-y-3">
           <Button
             onClick={() => onNavigate('tasks')}
-            className="w-full h-16 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 border-0"
+            className="w-full h-16 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 border-0 active:scale-95"
             style={{ 
               background: 'linear-gradient(135deg, #007BFF 0%, #0066CC 100%)',
               color: 'white'
@@ -98,7 +87,7 @@ export function Home({ userName, tasks, onNavigate }: HomeProps) {
 
           <Button
             onClick={() => onNavigate('rewards')}
-            className="w-full h-16 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 border-0"
+            className="w-full h-16 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 border-0 active:scale-95"
             style={{ 
               background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
               color: 'white'
@@ -113,43 +102,29 @@ export function Home({ userName, tasks, onNavigate }: HomeProps) {
           </Button>
         </div>
 
-        {/* Mensaje de chat mejorado */}
-        <div className="pt-4 space-y-4">
-          <Card className="p-5 rounded-3xl shadow-md border-0 transform transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #F1F3F4 0%, #E5E7EB 100%)' }}>
-            <div className="flex items-center gap-3">
-              <Zap className="w-6 h-6 flex-shrink-0" style={{ color: '#007BFF' }} />
-              <p className="text-center flex-1" style={{ color: '#0B006E', fontWeight: 500 }}>
-                ¿Necesitas desahogarte o conversar?
-              </p>
-            </div>
-          </Card>
-
-          {/* Campo de chat mejorado */}
-          <div className="relative">
-            <div 
-              className="rounded-3xl p-1.5 shadow-xl flex items-center gap-2"
-              style={{ background: 'linear-gradient(135deg, #0B006E 0%, #1E40AF 100%)' }}
-            >
-              <div className="flex-1 bg-white rounded-3xl px-5 py-4 shadow-inner">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Escribe aquí para empezar a conversar..."
-                  className="w-full bg-transparent border-none outline-none placeholder:text-gray-400"
-                  style={{ color: '#0B006E' }}
-                />
+        {/* Botón Grande de Acceso al Chat (Modificado) */}
+        <div className="pt-2">
+          <button 
+            onClick={() => onNavigate('chat')}
+            className="w-full group focus:outline-none"
+          >
+            <Card className="p-5 rounded-3xl shadow-md border-0 transform transition-all group-hover:scale-105 group-active:scale-95 cursor-pointer relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #F1F3F4 0%, #E5E7EB 100%)' }}>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                   <MessageCircle className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="text-sm font-bold" style={{ color: '#0B006E' }}>Chat IA</h3>
+                  <p className="text-sm" style={{ color: '#0B006E', fontWeight: 500, opacity: 0.8 }}>
+                    ¿Necesitas desahogarte o conversar?
+                  </p>
+                </div>
+                <Zap className="w-5 h-5 text-yellow-500 group-hover:animate-pulse" />
               </div>
-              <button
-                onClick={handleChatSubmit}
-                className="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 flex-shrink-0 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-              >
-                <MessageCircle className="w-7 h-7 text-white" />
-              </button>
-            </div>
-          </div>
+              {/* Decoración de fondo al hacer hover */}
+              <div className="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-50 transition-opacity" />
+            </Card>
+          </button>
         </div>
 
         {/* Mensaje motivacional */}
