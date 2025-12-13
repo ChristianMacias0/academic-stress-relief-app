@@ -2,6 +2,15 @@ import { Search, MapPin, Star, Clock, Phone, Mail, Video, ArrowLeft, Users, Lapt
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from './ui/dialog';
 import { useState } from 'react';
 
 interface PsychologistSearchProps {
@@ -23,6 +32,11 @@ const psychologists = [
     image: '👩‍⚕️',
     status: 'online', // online | offline
     modality: 'hibrida', // virtual | presencial | hibrida
+    slots: [
+      '2025-12-18T10:00',
+      '2025-12-18T11:30',
+      '2025-12-19T09:00'
+    ],
   },
   {
     id: '2',
@@ -37,6 +51,10 @@ const psychologists = [
     image: '👨‍⚕️',
     status: 'offline',
     modality: 'presencial',
+    slots: [
+      '2025-12-19T14:00',
+      '2025-12-20T16:00'
+    ],
   },
   {
     id: '3',
@@ -51,6 +69,11 @@ const psychologists = [
     image: '👩‍⚕️',
     status: 'online',
     modality: 'virtual',
+    slots: [
+      '2025-12-18T08:30',
+      '2025-12-18T15:00',
+      '2025-12-21T10:00'
+    ],
   },
   {
     id: '4',
@@ -65,11 +88,20 @@ const psychologists = [
     image: '👨‍⚕️',
     status: 'offline',
     modality: 'hibrida',
+    slots: [
+      '2025-12-22T09:30',
+      '2025-12-22T11:00'
+    ],
   },
 ];
 
 export function PsychologistSearch({ onNavigate }: PsychologistSearchProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPsychologist, setSelectedPsychologist] = useState<any | null>(null);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [confirmation, setConfirmation] = useState<{ name: string; date: string; time: string } | null>(null);
 
   const filteredPsychologists = psychologists.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -235,6 +267,12 @@ export function PsychologistSearch({ onNavigate }: PsychologistSearchProps) {
                   size="sm"
                   className="rounded-full shadow-md hover:shadow-lg px-6 h-9 font-medium"
                   style={{ background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)', color: 'white' }}
+                  onClick={() => {
+                    setSelectedPsychologist(psychologist);
+                    setSelectedDate('');
+                    setSelectedTime('');
+                    setIsBookingOpen(true);
+                  }}
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Agendar
@@ -244,6 +282,108 @@ export function PsychologistSearch({ onNavigate }: PsychologistSearchProps) {
           </Card>
         ))}
       </div>
+
+      {/* Booking Dialog */}
+      <Dialog open={isBookingOpen} onOpenChange={(open) => setIsBookingOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agendar cita{selectedPsychologist ? ` con ${selectedPsychologist.name}` : ''}</DialogTitle>
+            <DialogDescription>
+              {selectedPsychologist?.availability ?? 'Selecciona fecha y hora disponibles.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 mt-2">
+            <label className="text-sm font-medium">Fecha</label>
+            <select
+              className="w-full rounded-md border p-2"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setSelectedTime('');
+              }}
+            >
+              <option value="">Selecciona una fecha</option>
+              {selectedPsychologist?.slots && Array.from(new Set(selectedPsychologist.slots.map((s: string) => s.split('T')[0]))).map((date: string) => (
+                <option key={date} value={date}>{new Date(date).toLocaleDateString()}</option>
+              ))}
+            </select>
+
+            <label className="text-sm font-medium">Hora</label>
+            <select
+              className="w-full rounded-md border p-2"
+              value={selectedTime}
+              onChange={(e) => setSelectedTime(e.target.value)}
+              disabled={!selectedDate}
+            >
+              <option value="">Selecciona una hora</option>
+              {selectedPsychologist?.slots && selectedDate && selectedPsychologist.slots
+                .filter((s: string) => s.startsWith(selectedDate))
+                .map((s: string) => {
+                  const time = s.split('T')[1];
+                  return <option key={s} value={time}>{time}</option>;
+                })}
+            </select>
+            <p className="text-xs text-gray-500">Seleccione uno de los horarios disponibles. El profesional confirmará la cita.</p>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsBookingOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!selectedDate || !selectedTime) {
+                  // simple feedback: alert
+                  alert('Por favor selecciona fecha y hora antes de reservar.');
+                  return;
+                }
+
+                setIsBookingOpen(false);
+                setConfirmation({
+                  name: selectedPsychologist?.name ?? 'Profesional',
+                  date: selectedDate,
+                  time: selectedTime,
+                });
+              }}
+            >
+              Reservar
+            </Button>
+          </DialogFooter>
+          <DialogClose />
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={!!confirmation} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reserva confirmada</DialogTitle>
+            <DialogDescription>
+              Tu cita ha sido reservada con éxito.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2">
+            {confirmation && (
+              <div className="text-sm">
+                <p className="font-medium">Profesional: {confirmation.name}</p>
+                <p>Fecha: {confirmation.date}</p>
+                <p>Hora: {confirmation.time}</p>
+                <p className="mt-2 text-xs text-gray-600">El psicólogo se pondrá en contacto con usted más tarde para coordinar mejor la cita.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setConfirmation(null)}>Cerrar</Button>
+          </DialogFooter>
+          <DialogClose />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
