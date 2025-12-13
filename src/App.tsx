@@ -31,8 +31,8 @@ export default function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('app_tasks');
     return saved ? JSON.parse(saved) : [
-      { id: '1', title: 'Estudiar para examen de Cálculo', completed: false, reward: 50, dueDate: '2025-11-18' },
-      { id: '2', title: 'Entregar proyecto de Programación', completed: false, reward: 80, dueDate: '2025-11-20' },
+      { id: '1', title: 'Estudiar para examen de Cálculo', completed: false, reward: 50, dueDate: '2025-12-18' },
+      { id: '2', title: 'Entregar proyecto de Programación', completed: false, reward: 80, dueDate: '2025-12-20' },
     ];
   });
 
