@@ -5,29 +5,34 @@ import { TaskManager } from './components/TaskManager';
 import { Rewards } from './components/Rewards';
 import { Profile } from './components/Profile';
 import { PsychologistSearch } from './components/PsychologistSearch';
-import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Sparkles, ArrowRight } from 'lucide-react';
+import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Lock, Eye, EyeOff, ArrowRight, Divide } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
-import { Card } from './components/ui/card';
 import { Label } from './components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
 
 type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists';
 
 export default function App() {
   // --- ESTADOS CON PERSISTENCIA (LocalStorage) ---
   
-  // 1. Nombre de Usuario (Si está vacío, muestra Onboarding)
+  // 1. Nombre de Usuario (Login)
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem('app_userName') || '';
   });
 
-  // 2. Monedas
+  // 2. Estado de Términos y Condiciones
+  const [acceptedTerms, setAcceptedTerms] = useState(() => {
+    return localStorage.getItem('app_terms_accepted') === 'true';
+  });
+
+  // 3. Monedas
   const [coins, setCoins] = useState(() => {
     const saved = localStorage.getItem('app_coins');
     return saved ? parseInt(saved) : 150;
   });
 
-  // 3. Tareas
+  // 4. Tareas
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('app_tasks');
     return saved ? JSON.parse(saved) : [
@@ -36,7 +41,7 @@ export default function App() {
     ];
   });
 
-  // 4. Recompensas
+  // 5. Recompensas
   const [rewards, setRewards] = useState(() => {
     const saved = localStorage.getItem('app_rewards');
     return saved ? JSON.parse(saved) : [
@@ -47,15 +52,26 @@ export default function App() {
   });
 
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const [onboardingName, setOnboardingName] = useState(''); // Estado temporal para el input del onboarding
+  
+  // --- ESTADOS TEMPORALES PARA LOGIN ---
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
 
   // --- EFECTOS PARA GUARDAR CAMBIOS AUTOMÁTICAMENTE ---
   useEffect(() => localStorage.setItem('app_userName', userName), [userName]);
+  useEffect(() => localStorage.setItem('app_terms_accepted', String(acceptedTerms)), [acceptedTerms]);
   useEffect(() => localStorage.setItem('app_coins', coins.toString()), [coins]);
   useEffect(() => localStorage.setItem('app_tasks', JSON.stringify(tasks)), [tasks]);
   useEffect(() => localStorage.setItem('app_rewards', JSON.stringify(rewards)), [rewards]);
 
   // --- LÓGICA DEL NEGOCIO ---
+
+  const handleLogin = () => {
+    if (loginUser.trim()) {
+      setUserName(loginUser);
+    }
+  };
 
   const completeTask = (taskId: string) => {
     const task = tasks.find((t: any) => t.id === taskId);
@@ -124,61 +140,140 @@ export default function App() {
     }
   };
 
-  // --- PANTALLA DE ONBOARDING (Si no hay usuario) ---
+  // --- PANTALLA DE LOGIN / TÉRMINOS (Si no hay usuario) ---
   if (!userName) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-white">
-        <div className="w-full max-w-md h-[800px] rounded-3xl shadow-2xl overflow-hidden relative flex flex-col items-center justify-center p-8 text-center space-y-8" 
-             style={{ background: 'linear-gradient(180deg, #E0E7FF 0%, #FFFFFF 100%)', borderColor: '#0B006E', borderWidth: '1px' }}>
-          
-          {/* Decoración */}
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #007BFF 0%, transparent 70%)' }} />
-          
-          <div className="space-y-4 z-10">
-            <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-xl animate-bounce" style={{ background: 'linear-gradient(135deg, #007BFF 0%, #0066CC 100%)' }}>
-              <Sparkles className="w-12 h-12 text-white" />
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #E0E7FF 0%, #F5F3FF 100%)' }}>
+        
+        {/* Decoración de fondo general */}
+        <div className="absolute top-10 left-10 w-64 h-64 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
+        <div className="absolute top-10 right-10 w-64 h-64 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-8 left-20 w-64 h-64 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+
+        {/* --- MODAL DE TÉRMINOS Y CONDICIONES --- */}
+        <Dialog open={!acceptedTerms}>
+          <DialogContent className="max-w-md rounded-2xl" onInteractOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center" style={{ color: '#0B006E' }}>Términos y Condiciones</DialogTitle>
+              <DialogDescription className="text-center">
+                Debes aceptar los términos para utilizar la aplicación.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="h-[300px] w-full rounded-xl border p-5 bg-gray-50/50 text-sm text-gray-600 leading-relaxed overflow-y-auto text-justify shadow-inner">
+              <p className="font-bold mb-2 text-blue-900">1. Introducción</p>
+              <p className="mb-4">
+                Bienvenido a nuestra aplicación de bienestar académico. Al usar esta app, aceptas promover un ambiente seguro y respetuoso. El propósito es ayudar a gestionar el estrés y organizar tareas.
+              </p>
+              <p className="font-bold mb-2 text-blue-900">2. Privacidad de Datos</p>
+              <p className="mb-4">
+                Tus datos (nombre, tareas, monedas) se guardan únicamente en tu dispositivo (LocalStorage). No enviamos tu información personal a servidores externos, salvo las conversaciones anónimas con la IA para generar respuestas.
+              </p>
+              <p className="font-bold mb-2 text-blue-900">3. Uso Responsable</p>
+              <p className="mb-4">
+                El chatbot es una herramienta de apoyo, no sustituye la terapia profesional. En caso de crisis severa, por favor consulta la sección de "Buscar Ayuda" para contactar a un profesional humano.
+              </p>
+              <p className="font-bold mb-2 text-blue-900">4. Exención de Responsabilidad</p>
+              <p className="mb-4">
+                Los desarrolladores no se hacen responsables por decisiones tomadas basándose únicamente en las sugerencias de la IA. Usa tu criterio.
+              </p>
             </div>
-            <h1 className="text-3xl font-bold" style={{ color: '#0B006E' }}>¡Bienvenido/a!</h1>
-            <div className="w-0.25">
-              <p className="text-lg" style={{ color: '#1E40AF' },{ padding: "15px"}}>
-                Estamos aquí para ayudarte a organizar tu día y sentirte mejor.
+
+            <DialogFooter className="sm:justify-center">
+              <Button 
+                onClick={() => setAcceptedTerms(true)}
+                className="w-full sm:w-auto rounded-full px-8 shadow-lg hover:shadow-xl transition-all"
+                style={{ background: 'linear-gradient(135deg, #007BFF 0%, #0B006E 100%)' }}
+              >
+                Aceptar y Continuar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* --- FORMULARIO DE LOGIN (Estilizado al 75% de ancho) --- */}
+        <div className={`w-full max-w-[800px] bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden relative flex flex-col p-8 sm:p-10 space-y-8 border border-white/50 transition-all duration-500 ${!acceptedTerms ? 'blur-md scale-95 pointer-events-none opacity-50' : 'scale-100 opacity-100'}`}>
+          
+          {/* Header del Login */}
+          <div className="flex flex-col items-center text-center space-y-4" style={{marginTop: "15px"}}>
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-2 transform hover:scale-110 transition-transform duration-300" 
+                 style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)' }}>
+              <Lock className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1E3A8A' }}>¡Bienvenido de nuevo!</h1>
+              <p className="text-sm text-slate-500 mt-2 font-medium">
+                Ingresa tus credenciales para acceder
               </p>
             </div>
           </div>
 
-
-          <div className="w-0.25" style={{margin:"10px"}}>
-            <Card className="w-0.25 p-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm z-10">
-              <div className="space-y-4 text-left">
-                <Label htmlFor="name" className="text-base font-semibold" style={{ color: '#0B006E' }}>
-                  ¿Cómo te gustaría que te llamemos?
-                </Label>
+          {/* Campos (Aplicando w-[75%] y mx-auto para centrar y reducir ancho) */}
+          <div className="space-y-5 w-[75%] mx-auto">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-semibold ml-1 text-slate-700">
+                Usuario
+              </Label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  <User className="w-5 h-5" />
+                </div>
                 <Input
-                  id="name"
-                  value={onboardingName}
-                  onChange={(e) => setOnboardingName(e.target.value)}
-                  placeholder="Escribe tu nombre o apodo..."
-                  className="h-12 text-lg border-2"
-                  style={{ borderColor: '#007BFF' }}
-                  onKeyPress={(e) => e.key === 'Enter' && onboardingName.trim() && setUserName(onboardingName)}
-                  autoFocus
+                  id="username"
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="ej. Estudiante1"
+                  className="pl-12 h-12 text-base border-slate-200 bg-slate-50/50 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300"
                 />
               </div>
-            </Card>
+            </div>
 
-            <div style={{margin:"15px"}}>
-              <Button 
-                onClick={() => {
-                  if (onboardingName.trim()) setUserName(onboardingName);
-                }}
-                disabled={!onboardingName.trim()}
-                className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl transition-all hover:scale-105 z-10"
-                style={{ background: 'linear-gradient(135deg, #007BFF 0%, #0B006E 100%)' }}
-              >
-                Comenzar <ArrowRight className="ml-2 w-6 h-6" />
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-semibold ml-1 text-slate-700">
+                Contraseña
+              </Label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <Input
+                  id="password"
+                  type={showPass ? "text" : "password"}
+                  value={loginPass}
+                  onChange={(e) => setLoginPass(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-12 pr-12 h-12 text-base border-slate-200 bg-slate-50/50 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300"
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                />
+                <button 
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors p-1 rounded-md hover:bg-slate-100"
+                  type="button"
+                >
+                  {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Botón (Aplicando w-[75%] y mx-auto) */}
+          
+          
+          <div className="pt-2 w-[75%] mx-auto " style={{marginTop: "15px"}}>
+            <Button 
+              onClick={handleLogin}
+              disabled={!loginUser.trim() || !acceptedTerms}
+              className="w-full h-12 rounded-2xl text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
+              style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)' }}
+            >
+              Ingresar a mi espacio <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+            <p className="text-xs text-slate-400 text-center mt-6">
+              *Ingreso simulado: Puedes usar cualquier contraseña.
+            </p>
+          </div>
+
+
         </div>
       </div>
     );
