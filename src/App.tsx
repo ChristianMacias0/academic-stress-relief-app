@@ -11,8 +11,11 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
 
-type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists';
-
+type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists' | 'events' | 'event-detail' | 'payment';
+import Events from './components/Events';
+import DetailsEvent from './components/DetailsEvent';
+import PagoEvento from './components/PagoEvento';
+import { Evento } from './components/eventsData';
 export default function App() {
   // --- ESTADOS CON PERSISTENCIA (LocalStorage) ---
   
@@ -52,11 +55,13 @@ export default function App() {
   });
 
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  
+  const [onboardingName, setOnboardingName] = useState('');
+
   // --- ESTADOS TEMPORALES PARA LOGIN ---
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Evento | null>(null);
 
   // --- EFECTOS PARA GUARDAR CAMBIOS AUTOMÁTICAMENTE ---
   useEffect(() => localStorage.setItem('app_userName', userName), [userName]);
@@ -130,8 +135,30 @@ export default function App() {
       case 'tasks':
         return <TaskManager tasks={tasks} onComplete={completeTask} onAdd={addTask} onDelete={deleteTask} />;
       case 'rewards':
-        return <Rewards rewards={rewards} coins={coins} onRedeem={redeemReward} onAdd={addReward} onDelete={deleteReward} />;
-      case 'profile':
+          return (
+          <Events 
+            onSelectEvent={(evento) => {
+              setSelectedEvent(evento);
+              setCurrentScreen('event-detail');
+            }} 
+          />
+        );
+      case 'event-detail':
+        return selectedEvent ? (
+          <DetailsEvent 
+            evento={selectedEvent} 
+            onBack={() => setCurrentScreen('rewards')} 
+            onPay={() => setCurrentScreen('payment')}
+          />
+        ) : null;
+      case 'payment':
+        return selectedEvent ? (
+          <PagoEvento 
+            precio={selectedEvent.precio} 
+            onFinish={() => setCurrentScreen('rewards')} 
+          />
+        ) : null;
+        case 'profile':
         return <Profile userName={userName} coins={coins} tasks={tasks} onNameChange={setUserName} onNavigate={setCurrentScreen} />;
       case 'psychologists':
         return <PsychologistSearch onNavigate={setCurrentScreen} />;
