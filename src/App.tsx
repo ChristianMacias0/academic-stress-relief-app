@@ -367,10 +367,10 @@ export default function App() {
               className={`flex flex-col items-center gap-1 transition-all duration-300 ${
                 currentScreen === 'rewards' ? 'scale-110 -translate-y-1' : 'opacity-50 hover:opacity-80'
               }`}
-              style={{ color: currentScreen === 'rewards' ? '#F59E0B' : '#0B006E' }}
+              style={{ color: currentScreen === 'rewards' ? '#0B006E' : '#0B006E' }}
             >
               <Gift className={`w-6 h-6 ${currentScreen === 'rewards' ? 'fill-current' : ''}`} />
-              <span className="text-xs font-medium">Premios</span>
+              <span className="text-xs font-medium">Eventos</span>
             </button>
 
             <button
