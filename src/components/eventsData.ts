@@ -16,7 +16,7 @@ export const EVENTOS_DATA: Evento[] = [
     titulo: 'Fiesta de Bienvenida FIEC',
     descripcion: 'Música en vivo, snacks y el mejor ambiente para iniciar el semestre con energía.',
     fecha: '2026-03-15',
-    precio: 10.00,
+    precio: 1.00,
     importancia: 5,
     rachaRequerida: 15,
     categoria: 'Social',
@@ -27,7 +27,7 @@ export const EVENTOS_DATA: Evento[] = [
     titulo: 'Bingo Universitario',
     descripcion: 'Participa por laptops, tablets y bonos de cafetería mientras te relajas.',
     fecha: '2026-02-10',
-    precio: 5.00,
+    precio: 0.50,
     importancia: 4,
     rachaRequerida: 10,
     categoria: 'Premios'
@@ -37,7 +37,7 @@ export const EVENTOS_DATA: Evento[] = [
     titulo: 'Torneo E-Sports: FIFA 26',
     descripcion: 'Demuestra quién es el mejor en la cancha virtual. ¡Premios en efectivo!',
     fecha: '2026-02-25',
-    precio: 7.50,
+    precio: 0.50,
     importancia: 3,
     rachaRequerida: 12,
     categoria: 'Deportes'
