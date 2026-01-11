@@ -5,7 +5,7 @@ import { TaskManager } from './components/TaskManager';
 import { Rewards } from './components/Rewards';
 import { Profile } from './components/Profile';
 import { PsychologistSearch } from './components/PsychologistSearch';
-import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Lock, Eye, EyeOff, ArrowRight, Divide } from 'lucide-react';
+import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Lock, Eye, EyeOff, ArrowRight, Divide, HeartPulse } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
@@ -15,10 +15,14 @@ type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists
 import Events from './components/Events';
 import DetailsEvent from './components/DetailsEvent';
 import PagoEvento from './components/PagoEvento';
-import { Evento } from './components/eventsData';
+import { EVENTOS_DATA, Evento } from './components/eventsData';
+
 export default function App() {
   // --- ESTADOS CON PERSISTENCIA (LocalStorage) ---
-  
+  const [events, setEvents] = useState<Evento[]>(() => {
+    const saved = localStorage.getItem('app_events');
+    return saved ? JSON.parse(saved) : EVENTOS_DATA;
+  });
   // 1. Nombre de Usuario (Login)
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem('app_userName') || '';
@@ -69,9 +73,15 @@ export default function App() {
   useEffect(() => localStorage.setItem('app_coins', coins.toString()), [coins]);
   useEffect(() => localStorage.setItem('app_tasks', JSON.stringify(tasks)), [tasks]);
   useEffect(() => localStorage.setItem('app_rewards', JSON.stringify(rewards)), [rewards]);
-
+useEffect(() => localStorage.setItem('app_events', JSON.stringify(events)), [events]);
   // --- LÓGICA DEL NEGOCIO ---
-
+const handlePurchase = (eventId: string) => {
+    setEvents(prevEvents => 
+      prevEvents.map(event => 
+        event.id === eventId ? { ...event, comprado: true } : event
+      )
+    );
+  };
   const handleLogin = () => {
     if (loginUser.trim()) {
       setUserName(loginUser);
@@ -135,8 +145,9 @@ export default function App() {
       case 'tasks':
         return <TaskManager tasks={tasks} onComplete={completeTask} onAdd={addTask} onDelete={deleteTask} />;
       case 'rewards':
-          return (
+        return (
           <Events 
+            listaEventosState={events} // Pasamos la lista del estado
             onSelectEvent={(evento) => {
               setSelectedEvent(evento);
               setCurrentScreen('event-detail');
@@ -146,7 +157,7 @@ export default function App() {
       case 'event-detail':
         return selectedEvent ? (
           <DetailsEvent 
-            evento={selectedEvent} 
+            evento={events.find(e => e.id === selectedEvent.id) || selectedEvent} 
             onBack={() => setCurrentScreen('rewards')} 
             onPay={() => setCurrentScreen('payment')}
           />
@@ -155,7 +166,10 @@ export default function App() {
         return selectedEvent ? (
           <PagoEvento 
             precio={selectedEvent.precio} 
-            onFinish={() => setCurrentScreen('rewards')} 
+            onFinish={() => {
+              handlePurchase(selectedEvent.id); // Actualizamos a vigente
+              setCurrentScreen('rewards');
+            }} 
           />
         ) : null;
         case 'profile':
@@ -307,17 +321,37 @@ export default function App() {
   }
 
   // --- APP PRINCIPAL ---
-  const showBottomNav = currentScreen !== 'psychologists';
+  const showBottomNav = true;
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md h-[800px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden" style={{ borderColor: '#0B006E', borderWidth: '1px' }}>
+      <div className="min-h-screen bg-white flex justify-center items-start pt-10 p-4 relative">
         
-        {/* Main Content */}
+        <div className="relative w-full max-w-md h-[800px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+               {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
           {renderScreen()}
         </div>
-
+        {currentScreen !== 'psychologists' && currentScreen !== 'chat' && (
+          <button 
+            onClick={() => setCurrentScreen('psychologists')}
+            aria-label="Buscar ayuda profesional"
+            className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 border-4 border-white transition-transform active:scale-95"
+            style={{ 
+              position: 'absolute', 
+              bottom: '90px', 
+              right: '20px', 
+              zIndex: 9999,
+              background: 'linear-gradient(135deg, #F43F5E 0%, #BE123C 100%)'
+            }}
+          >
+            <HeartPulse className="w-8 h-8 text-white" />
+            {/* Animación de ping */}
+            <span className="absolute top-0 right-0 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+            </span>
+          </button>
+        )}
         {/* Bottom Navigation */}
         {showBottomNav && (
           <nav className="bg-white border-t px-6 py-3 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20" style={{ borderColor: 'rgba(11, 0, 110, 0.1)' }}>
@@ -331,6 +365,7 @@ export default function App() {
               <HomeIcon className={`w-6 h-6 ${currentScreen === 'home' ? 'fill-current' : ''}`} />
               <span className="text-xs font-medium">Inicio</span>
             </button>
+            
             
             <button
               onClick={() => setCurrentScreen('tasks')}
@@ -362,6 +397,7 @@ export default function App() {
               <span className="text-xs mt-1 font-medium" style={{ color: currentScreen === 'chat' ? '#10b981' : '#0B006E', opacity: currentScreen === 'chat' ? 1 : 0.5 }}>Chat IA</span>
             </button>
 
+
             <button
               onClick={() => setCurrentScreen('rewards')}
               className={`flex flex-col items-center gap-1 transition-all duration-300 ${
@@ -385,7 +421,11 @@ export default function App() {
             </button>
           </nav>
         )}
+        
       </div>
+         
+ 
     </div>
+    
   );
 }

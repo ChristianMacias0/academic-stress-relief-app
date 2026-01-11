@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EVENTOS_DATA, Evento } from './eventsData';
 import { Card } from './ui/card';
 import { Calendar, Star, Ticket, CheckCircle, DollarSign, Clock, TrendingUp, Filter } from 'lucide-react';
 
-interface Props { onSelectEvent: (evento: Evento) => void; }
+interface Props { onSelectEvent: (evento: Evento) => void; listaEventosState?: Evento[]; }
 
-export default function Events({ onSelectEvent }: Props) {
-  const [listaEventos, setListaEventos] = useState<Evento[]>(EVENTOS_DATA);
+export default function Events({ onSelectEvent, listaEventosState }: Props) {
+  const [listaEventos, setListaEventos] = useState<Evento[]>(listaEventosState || EVENTOS_DATA);
   const [filtroActivo, setFiltroActivo] = useState<string>('');
+
+  useEffect(() => {
+    if (listaEventosState) setListaEventos(listaEventosState);
+  }, [listaEventosState]);
 
   // Lógica de ordenamiento funcional
   const aplicarOrden = (criterio: 'precio' | 'fecha' | 'importancia') => {
