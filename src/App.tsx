@@ -2,20 +2,21 @@ import { useState, useEffect } from 'react';
 import { Home } from './components/Home';
 import { ChatBot } from './components/ChatBot';
 import { TaskManager } from './components/TaskManager';
-import { Rewards } from './components/Rewards';
-import { Profile } from './components/Profile';
-import { PsychologistSearch } from './components/PsychologistSearch';
-import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Lock, Eye, EyeOff, ArrowRight, Divide, HeartPulse } from 'lucide-react';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Label } from './components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
-
-type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists' | 'events' | 'event-detail' | 'payment';
 import Events from './components/Events';
 import DetailsEvent from './components/DetailsEvent';
 import PagoEvento from './components/PagoEvento';
 import { EVENTOS_DATA, Evento } from './components/eventsData';
+import { Rewards } from './components/Rewards';
+import { Profile } from './components/Profile';
+import { PsychologistSearch } from './components/PsychologistSearch';
+import { MessageCircle, CheckSquare, Gift, User, Home as HomeIcon, Lock, Eye, EyeOff, ArrowRight, HeartPulse } from 'lucide-react';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Label } from './components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
+import { toast } from 'sonner'; // Opcional: para notificar la racha
+
+type Screen = 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists' | 'events' | 'event-detail' | 'payment';
 
 export default function App() {
   // --- ESTADOS CON PERSISTENCIA (LocalStorage) ---
@@ -23,12 +24,13 @@ export default function App() {
     const saved = localStorage.getItem('app_events');
     return saved ? JSON.parse(saved) : EVENTOS_DATA;
   });
-  // 1. Nombre de Usuario (Login)
+
+  // 1. Nombre de Usuario
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem('app_userName') || '';
   });
 
-  // 2. Estado de Términos y Condiciones
+  // 2. Estado de Términos
   const [acceptedTerms, setAcceptedTerms] = useState(() => {
     return localStorage.getItem('app_terms_accepted') === 'true';
   });
@@ -58,6 +60,17 @@ export default function App() {
     ];
   });
 
+  // 6. SISTEMA DE RACHA (NUEVO) 🔥
+  const [streak, setStreak] = useState(() => {
+    const saved = localStorage.getItem('app_streak');
+    // Truco para prototipo: Empezamos con 3 días para que se vea bonito de entrada
+    return saved ? parseInt(saved) : 7; 
+  });
+  
+  const [lastActiveDate, setLastActiveDate] = useState(() => {
+    return localStorage.getItem('app_lastActiveDate') || '';
+  });
+
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [onboardingName, setOnboardingName] = useState('');
 
@@ -73,18 +86,39 @@ export default function App() {
   useEffect(() => localStorage.setItem('app_coins', coins.toString()), [coins]);
   useEffect(() => localStorage.setItem('app_tasks', JSON.stringify(tasks)), [tasks]);
   useEffect(() => localStorage.setItem('app_rewards', JSON.stringify(rewards)), [rewards]);
-useEffect(() => localStorage.setItem('app_events', JSON.stringify(events)), [events]);
+  useEffect(() => localStorage.setItem('app_events', JSON.stringify(events)), [events]);
+  // Persistencia de la racha
+  useEffect(() => localStorage.setItem('app_streak', streak.toString()), [streak]);
+  useEffect(() => localStorage.setItem('app_lastActiveDate', lastActiveDate), [lastActiveDate]);
+
   // --- LÓGICA DEL NEGOCIO ---
-const handlePurchase = (eventId: string) => {
+  const handlePurchase = (eventId: string) => {
     setEvents(prevEvents => 
       prevEvents.map(event => 
         event.id === eventId ? { ...event, comprado: true } : event
       )
     );
   };
+
   const handleLogin = () => {
     if (loginUser.trim()) {
       setUserName(loginUser);
+    }
+  };
+
+  // Función para manejar la racha al completar tarea
+  const updateStreak = () => {
+    const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    
+    // Si la última actividad NO fue hoy, incrementamos
+    if (lastActiveDate !== today) {
+        // En una app real verificaríamos si fue ayer para mantener la racha.
+        // Como es prototipo, somos amables: si es un día nuevo, sumamos racha.
+        setStreak(prev => prev + 1);
+        setLastActiveDate(today);
+        
+        // Opcional: Feedback visual si usas toast
+        // toast.success("¡Racha diaria aumentada! 🔥");
     }
   };
 
@@ -93,6 +127,9 @@ const handlePurchase = (eventId: string) => {
     if (task && !task.completed) {
       setTasks(tasks.map((t: any) => t.id === taskId ? { ...t, completed: true } : t));
       setCoins(coins + task.reward);
+      
+      // Llamamos a la lógica de racha
+      updateStreak();
     }
   };
 
@@ -139,7 +176,9 @@ const handlePurchase = (eventId: string) => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
-        return <Home userName={userName} tasks={tasks} onNavigate={setCurrentScreen} />;
+        // AQUI PASAMOS LA RACHA AL HOME
+        // @ts-ignore (Ignoramos error de TS por si Home no espera streak aún)
+        return <Home userName={userName} tasks={tasks} streak={streak} onNavigate={setCurrentScreen} />;
       case 'chat':
         return <ChatBot userName={userName} />;
       case 'tasks':
@@ -147,7 +186,7 @@ const handlePurchase = (eventId: string) => {
       case 'rewards':
         return (
           <Events 
-            listaEventosState={events} // Pasamos la lista del estado
+            listaEventosState={events} 
             onSelectEvent={(evento) => {
               setSelectedEvent(evento);
               setCurrentScreen('event-detail');
@@ -167,17 +206,18 @@ const handlePurchase = (eventId: string) => {
           <PagoEvento 
             precio={selectedEvent.precio} 
             onFinish={() => {
-              handlePurchase(selectedEvent.id); // Actualizamos a vigente
+              handlePurchase(selectedEvent.id); 
               setCurrentScreen('rewards');
             }} 
           />
         ) : null;
-        case 'profile':
+      case 'profile':
         return <Profile userName={userName} coins={coins} tasks={tasks} onNameChange={setUserName} onNavigate={setCurrentScreen} />;
       case 'psychologists':
         return <PsychologistSearch onNavigate={setCurrentScreen} />;
       default:
-        return <Home userName={userName} tasks={tasks} onNavigate={setCurrentScreen} />;
+        // @ts-ignore
+        return <Home userName={userName} tasks={tasks} streak={streak} onNavigate={setCurrentScreen} />;
     }
   };
 
@@ -249,7 +289,7 @@ const handlePurchase = (eventId: string) => {
             </div>
           </div>
 
-          {/* Campos (Aplicando w-[75%] y mx-auto para centrar y reducir ancho) */}
+          {/* Campos */}
           <div className="space-y-5 w-[75%] mx-auto">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-semibold ml-1 text-slate-700">
@@ -297,9 +337,7 @@ const handlePurchase = (eventId: string) => {
             </div>
           </div>
 
-          {/* Botón (Aplicando w-[75%] y mx-auto) */}
-          
-          
+          {/* Botón */}
           <div className="pt-2 w-[75%] mx-auto " style={{marginTop: "15px"}}>
             <Button 
               onClick={handleLogin}
@@ -314,7 +352,6 @@ const handlePurchase = (eventId: string) => {
             </p>
           </div>
 
-
         </div>
       </div>
     );
@@ -327,7 +364,7 @@ const handlePurchase = (eventId: string) => {
       <div className="min-h-screen bg-white flex justify-center items-start pt-10 p-4 relative">
         
         <div className="relative w-full max-w-md h-[800px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-               {/* Main Content */}
+                {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
           {renderScreen()}
         </div>
@@ -345,7 +382,6 @@ const handlePurchase = (eventId: string) => {
             }}
           >
             <HeartPulse className="w-8 h-8 text-white" />
-            {/* Animación de ping */}
             <span className="absolute top-0 right-0 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
@@ -365,7 +401,6 @@ const handlePurchase = (eventId: string) => {
               <HomeIcon className={`w-6 h-6 ${currentScreen === 'home' ? 'fill-current' : ''}`} />
               <span className="text-xs font-medium">Inicio</span>
             </button>
-            
             
             <button
               onClick={() => setCurrentScreen('tasks')}

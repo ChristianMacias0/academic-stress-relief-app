@@ -1,4 +1,4 @@
-import { Calendar, TrendingUp, MessageCircle, CheckSquare, Gift, Sparkles, Zap } from 'lucide-react';
+import { Calendar, TrendingUp, MessageCircle, CheckSquare, Gift, Sparkles, Zap, Flame } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 
@@ -13,10 +13,11 @@ interface Task {
 interface HomeProps {
   userName: string;
   tasks: Task[];
+  streak: number; // <--- AGREGADO: Recibimos la racha aquí
   onNavigate: (screen: 'home' | 'chat' | 'tasks' | 'rewards' | 'profile' | 'psychologists') => void;
 }
 
-export function Home({ userName, tasks, onNavigate }: HomeProps) {
+export function Home({ userName, tasks, streak, onNavigate }: HomeProps) {
   const pendingTasks = tasks.filter(t => !t.completed);
   const completedToday = tasks.filter(t => t.completed).length;
 
@@ -34,8 +35,24 @@ export function Home({ userName, tasks, onNavigate }: HomeProps) {
             <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
             <span className="text-white">¡Bienvenido de vuelta!</span>
           </div>
+          
           <h1 className="text-4xl" style={{ color: '#0B006E', fontWeight: 700 }}>Hola {userName}</h1>
-          <p className="text-lg" style={{ color: '#0B006E', opacity: 0.8 }}>
+          
+          {/* --- NUEVO: INDICADOR DE RACHA --- */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-orange-100 border border-orange-200 shadow-sm transform hover:scale-105 transition-transform">
+               <div className="bg-orange-500 rounded-full p-1.5">
+                 <Flame className="w-5 h-5 text-white fill-white animate-pulse" />
+               </div>
+               <div className="text-left">
+                  <p className="text-xs font-bold text-orange-600 uppercase tracking-wide">Racha Actual</p>
+                  <p className="text-xl font-black text-orange-700 leading-none">{streak} Días 🔥</p>
+               </div>
+            </div>
+          </div>
+          {/* ---------------------------------- */}
+
+          <p className="text-lg pt-2" style={{ color: '#0B006E', opacity: 0.8 }}>
             ¿Qué deseas hacer hoy?
           </p>
         </div>
