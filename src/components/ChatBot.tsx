@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User as UserIcon, Heart, AlertCircle, Lock } from 'lucide-react'; // Agregué Lock
+import { Send, Bot, User as UserIcon, Heart, AlertCircle, Lock, CreditCard, Sparkles, Check } from 'lucide-react'; 
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { toast } from "sonner"; // Asumiendo que usas sonner como en Rewards
+import { toast } from "sonner"; 
 
 // --- CONFIGURACIÓN ---
-const MAX_MESSAGES_PER_SESSION = 10; // Límite de mensajes por sesión
+const MAX_MESSAGES_PER_SESSION = 10; 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Instrucciones para que la IA no sea condescendiente y se limite al tema
@@ -17,7 +17,6 @@ REGLAS DE PERSONALIDAD:
 2. EFECTO ESPEJO: Solo si el usuario usa una palabra coloquial, tienes permiso para usarla sutilmente para conectar. Si el usuario es serio, mantente serio pero cercano.
 3. CERO CONDESCENDENCIA: Habla de igual a igual. Prohibido usar frases de lástima o clichés clínicos como "Es comprensible", "Lamento escuchar eso", "Valido tus sentimientos" o "Pobrecito".
 4. SIN DRAMA: Si el usuario está mal, no lo mires con pena. Normaliza la situación con frases simples como "A veces pasa", "Esos días son pesados" o "Te entiendo, a mí también me pasaría".
-
 REGLAS DE RESTRICCIÓN (MUY IMPORTANTE):
 1. TU ÚNICO PROPÓSITO es conversar, escuchar desahogos y hablar de estrés o emociones.
 2. SI EL USUARIO PIDE: ayuda con tareas, código, matemáticas, busquedas en google, recetas, datos históricos o cualquier tema "académico/técnico", DEBES NEGARTE AMABLEMENTE.
@@ -38,6 +37,10 @@ interface ChatBotProps {
 }
 
 export function ChatBot({ userName }: ChatBotProps) {
+  // --- ESTADO DE SUSCRIPCIÓN (SIMULADO) ---
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Estados del Chat
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -49,12 +52,11 @@ export function ChatBot({ userName }: ChatBotProps) {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [messageCount, setMessageCount] = useState(0); // Contador de mensajes
+  const [messageCount, setMessageCount] = useState(0); 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Inicializar Gemini
   const genAI = new GoogleGenerativeAI(API_KEY);
-  
   // Mantenemos una referencia al chat actual para mantener el contexto
   const chatSessionRef = useRef<any>(null);
 
@@ -70,10 +72,10 @@ export function ChatBot({ userName }: ChatBotProps) {
   const getChatSession = async () => {
     if (!chatSessionRef.current) {
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-robotics-er-1.5-preview",
+        model: "gemini-2.5-flash", // Asegúrate de que este sea el modelo correcto que usabas
         systemInstruction: SYSTEM_INSTRUCTION 
       });
-      
+
       chatSessionRef.current = model.startChat({
         history: [
           {
@@ -100,8 +102,8 @@ export function ChatBot({ userName }: ChatBotProps) {
     }
 
     const newMessageText = inputText;
-    setInputText(''); // Limpiar input inmediatamente
-    setMessageCount(prev => prev + 1); // Aumentar contador
+    setInputText(''); 
+    setMessageCount(prev => prev + 1); 
 
     // Agregar mensaje del usuario
     const userMessage: Message = {
@@ -110,6 +112,7 @@ export function ChatBot({ userName }: ChatBotProps) {
       sender: 'user',
       timestamp: new Date(),
     };
+
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
 
@@ -120,7 +123,7 @@ export function ChatBot({ userName }: ChatBotProps) {
       const response = result.response;
       const text = response.text();
 
-      // Análisis simple para detectar si la IA sugiere ayuda profesional (basado en palabras clave en SU respuesta)
+      // Análisis simple para detectar si la IA sugiere ayuda profesional
       const lowerResponse = text.toLowerCase();
       const isConcerning = lowerResponse.includes("profesional") || lowerResponse.includes("ayuda psicológica") || lowerResponse.includes("terapia");
 
@@ -150,9 +153,87 @@ export function ChatBot({ userName }: ChatBotProps) {
     }
   };
 
+  // Función para simular el pago
+  const handleSimulatePayment = () => {
+    // Aquí podrías agregar un pequeño delay para simular procesamiento
+    const loadingToast = toast.loading("Procesando pago...");
+    
+    setTimeout(() => {
+        toast.dismiss(loadingToast);
+        setIsSubscribed(true);
+        toast.success("¡Pago exitoso! Bienvenido a Mindzy Premium.");
+    }, 1500);
+  };
 
   const isLimitReached = messageCount >= MAX_MESSAGES_PER_SESSION;
 
+  // --- RENDERIZADO CONDICIONAL: PANTALLA DE PAGO O CHAT ---
+  
+  if (!isSubscribed) {
+    return (
+        <div className="flex flex-col h-full items-center justify-center p-6 relative overflow-hidden" 
+             style={{ background: 'linear-gradient(135deg, #E0E7FF 0%, #F5F3FF 100%)' }}>
+            
+            {/* Decoración de fondo */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
+
+            <div className="w-full max-w-sm bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 p-8 flex flex-col items-center text-center space-y-6 z-10">
+                
+                {/* Icono Premium */}
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300"
+                     style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' , marginTop: "15px"}}>
+                    <Sparkles className="w-10 h-10 text-white" />
+                </div>
+
+                <div className="space-y-2">
+                    <h2 className="text-2xl font-bold" style={{ color: '#0B006E' }}>Mindzy Premium</h2>
+                    <p className="text-sm text-gray-600">
+                        Desbloquea tu compañero de bienestar ilimitado.
+                    </p>
+                </div>
+
+                {/* Lista de beneficios */}
+                <div className="w-[75%] bg-green-50/50 rounded-2xl p-4 space-y-3 border border-green-100" style={{marginTop: "15px" }}>
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span>Conversaciones ilimitadas</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span>Disponibilidad 24/7</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span>Privacidad total</span>
+                    </div>
+                </div>
+
+                {/* Precio */}
+                <div>
+                    <span className="text-4xl font-bold" style={{ color: '#0B006E' }}>$4.00</span>
+                    <span className="text-gray-500 text-sm">/mes</span>
+                </div>
+
+                {/* Botón de Pago Simulado */}
+                <Button 
+                    onClick={handleSimulatePayment}
+                    className="w-[90%] h-12 rounded-xl text-base font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                    style={{ background: 'linear-gradient(135deg, #0B006E 0%, #1E3A8A 100%)' }}
+                >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Realizar Pago
+                </Button>
+
+                <p className="text-[10px] text-gray-400" style={{marginBottom: "15px" }}>
+                    *Esto es una simulación. No se realizará ningún cargo real.
+                </p>
+            </div>
+        </div>
+    );
+  }
+
+  // --- RENDERIZADO DEL CHAT (CÓDIGO ORIGINAL) ---
   return (
     <div className="flex flex-col h-full relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #D1FAE5 0%, #A7F3D0 50%, #6EE7B7 100%)' }}>
       {/* Decorative elements */}
@@ -160,17 +241,19 @@ export function ChatBot({ userName }: ChatBotProps) {
       <div className="absolute bottom-0 right-0 w-40 h-40 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #059669 0%, transparent 70%)' }} />
       
       {/* Header */}
-      <div className="relative z-10 p-6 pb-4 text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+      <div className="relative z-10 p-6 pb-4 text-white shadow-lg" 
+           style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-3xl bg-white/20 flex items-center justify-center shadow-lg backdrop-blur-sm">
             <Bot className="w-9 h-9" />
           </div>
           <div className="flex-1">
             <h2 className="text-white text-xl mb-1">Asistente de Bienestar</h2>
+          
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                 <p className="text-white/90 text-sm">En línea (Beta)</p>
+                 <p className="text-white/90 text-sm">En línea (Premium)</p>
               </div>
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
                 {messageCount}/{MAX_MESSAGES_PER_SESSION} msgs
